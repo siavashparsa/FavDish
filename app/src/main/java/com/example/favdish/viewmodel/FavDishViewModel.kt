@@ -12,8 +12,20 @@ class FavDishViewModel(private val repository: FavDishRepository) : ViewModel() 
         repository.insertFavDishData(dish)
     }
 
-    val allDishesList:LiveData<List<FavDish>> = repository.allDishesList.asLiveData()
+    val allDishesList: LiveData<List<FavDish>> = repository.allDishesList.asLiveData()
 
+    fun update(dish: FavDish) = viewModelScope.launch {
+        repository.updateFavDishData(dish)
+    }
+
+    val favoriteDishes: LiveData<List<FavDish>> = repository.favoriteDishes.asLiveData()
+
+    fun delete(dish: FavDish) = viewModelScope.launch {
+        repository.deleteFavDishData(dish)
+    }
+
+    fun getFilteredList(value: String): LiveData<List<FavDish>> =
+        repository.filterListDishes(value).asLiveData()
 
 }
 

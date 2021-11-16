@@ -60,6 +60,8 @@ class AddUpdateDishActivity : AppCompatActivity(), View.OnClickListener {
 
     private lateinit var mCustomListDialog: Dialog
 
+    private var mFavDishDetails:FavDish? = null
+
     private val mFavDishViewModel: FavDishViewModel by viewModels {
 
         FavDishViewModelFactory((application as FavDishApplication).repository)
@@ -72,7 +74,32 @@ class AddUpdateDishActivity : AppCompatActivity(), View.OnClickListener {
         mBinding = ActivityAddUpdateDishBinding.inflate(layoutInflater)
         setContentView(mBinding.root)
 
+        //receive data from fragment
+        if (intent.hasExtra(Constants.EXTRA_DISH_DETAILS)){
+            mFavDishDetails = intent.getParcelableExtra(Constants.EXTRA_DISH_DETAILS)
+        }
+
         setupActionBar()
+
+        mFavDishDetails?.let {
+            if (it.id != 0) {
+                mImagePath = it.image
+
+                Glide.with(this@AddUpdateDishActivity)
+                    .load(mImagePath)
+                    .centerCrop()
+                    .into(mBinding.ivDishImage)
+
+                mBinding.etTitle.setText(it.title)
+                mBinding.etType.setText(it.type)
+                mBinding.etCategory.setText(it.category)
+                mBinding.etIngredients.setText(it.ingredients)
+                mBinding.etCookingTime.setText(it.cookingTime)
+                mBinding.etDirectionToCook.setText(it.directionToCook)
+
+                mBinding.btnAddDish.text = resources.getString(R.string.lbl_update_dish)
+            }
+        }
 
         mBinding.ivAddDishImage.setOnClickListener(this)
 
@@ -192,23 +219,41 @@ class AddUpdateDishActivity : AppCompatActivity(), View.OnClickListener {
                         }
                         else -> {
 
+                            var dishID = 0
+                            var imageSource = Constants.DISH_IMAGE_SOURCE_LOCAL
+                            var favoriteDish = false
+
+                            mFavDishDetails?.let {
+                                if (it.id != 0) {
+                                    dishID = it.id
+                                    imageSource = it.imageSource
+                                    favoriteDish = it.favorite_dish
+                                }
+                            }
+
                             val favDishDetails: FavDish = FavDish(
                                 mImagePath,
-                                Constants.DISH_IMAGE_SOURCE_LOCAL,
+                                imageSource,
                                 title,
                                 type,
                                 category,
                                 ingredients,
                                 cookingTimeInMinutes,
                                 cookingDirection,
-                                false
+                                favoriteDish,
+                                dishID
                             )
-                            mFavDishViewModel.insert(favDishDetails)
-                            Toast.makeText(
-                                this@AddUpdateDishActivity,
-                                "success add",
-                                Toast.LENGTH_SHORT
-                            ).show()
+
+                            if (dishID == 0 ){
+                                mFavDishViewModel.insert(favDishDetails)
+                                Toast.makeText(
+                                    this@AddUpdateDishActivity,
+                                    "success add",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }else{
+                                mFavDishViewModel.update(favDishDetails)
+                            }
                             finish()
                         }
                     }
@@ -222,9 +267,6 @@ class AddUpdateDishActivity : AppCompatActivity(), View.OnClickListener {
 
         val binding: DialogCustomImageSelectionBinding =
             DialogCustomImageSelectionBinding.inflate(layoutInflater)
-
-        /*Set the screen content from a layout resource.
-        The resource will be inflated, adding all top-level views to the screen.*/
         dialog.setContentView(binding.root)
 
         binding.tvCamera.setOnClickListener {
@@ -326,8 +368,6 @@ class AddUpdateDishActivity : AppCompatActivity(), View.OnClickListener {
 
                     val selectedPhotoUri = data.data
 
-//                    mBinding.ivDishImage.setImageURI(selectedPhotoUri)
-
                     Glide.with(this)
                         .load(selectedPhotoUri)
                         .centerCrop()
@@ -422,7 +462,7 @@ class AddUpdateDishActivity : AppCompatActivity(), View.OnClickListener {
         binding.tvTitle.text = title
         binding.rvList.layoutManager = LinearLayoutManager(this)
 
-        val adapter = CustomListItemAdapter(this, itemList, selection)
+        val adapter = CustomListItemAdapter(this,null, itemList, selection)
         binding.rvList.adapter = adapter
         mCustomListDialog.show()
 
@@ -450,16 +490,23 @@ class AddUpdateDishActivity : AppCompatActivity(), View.OnClickListener {
 
 
     companion object {
-
         private const val CAMERA = 1
         private const val GALLERY = 2
-
         private const val IMAGE_DIRECTORY = "FavDishImages"
-
     }
 
     private fun setupActionBar() {
         setSupportActionBar(mBinding.toolbarAddDishActivity)
+        if (mFavDishDetails != null && mFavDishDetails!!.id != 0 ){
+
+            supportActionBar?.let {
+                it.title = resources.getString(R.string.title_edit_dish)
+            }
+        }else{
+            supportActionBar?.let {
+                it.title = resources.getString(R.string.title_add_dish)
+            }
+        }
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
